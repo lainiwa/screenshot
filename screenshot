@@ -1,0 +1,159 @@
+#!/bin/sh
+
+# DESCRIPTION:
+# * make and save a screenshot
+# * [optionally] copy to clipboard
+# * [optionally] optimize it
+# * [optionally] OCR it
+#
+# ARGUMENTS:
+# * mode: full|selected|focused
+#
+# ENVIRONMENT VARIABLES:
+# * SCREENSHOT_DOCKER_HOST: set to prefer using docker for image optimization
+#     Examples: `unix:///var/run/docker.sock` for local execution
+#               `ssh://root@your.server.com` for remote
+#
+# DEPENDENCIES:
+# * Interpreter: POSIX shell + coreutils
+# * Screenshot tool: maim + xdotool | scrot | graphicsmagick + xdotool | imagemagick + xdotool
+# * Clipboard tool [opt]: xclip | xsel
+# * Image lossless optimizer [opt]: optipng | pngcrush | jpegoptim
+# * OCR tool [opt]: tesseract + tesseract-ocr-rus
+# * Locks manager [opt]: flock
+#
+
+
+set -o errexit  # exit on fail
+set -o nounset  # exit on undeclared variable
+# set -o xtrace   # trace execution
+
+
+save_dir=${HOME}/0files/imgs/screenshots
+save_ext=png
+save_date=$(date '+%s_%Y.%m.%d_%H:%M:%S')
+save_name=${save_date}.${save_ext}
+save_path=${save_dir}/${save_name}
+
+mkdir -p "${save_dir}"
+
+
+if command -v maim xdotool >/dev/null; then
+    [ "${1}" = 'full'    ] && maim                                         -- "${save_path}"
+    [ "${1}" = 'select'  ] && maim --select                                -- "${save_path}"
+    [ "${1}" = 'focused' ] && maim --window "$(xdotool getwindowfocus -f)" -- "${save_path}"
+
+elif command -v scrot >/dev/null; then
+    [ "${1}" = 'full'    ] && scrot --multidisp -- "${save_path}"
+    [ "${1}" = 'select'  ] && scrot --select    -- "${save_path}"
+    [ "${1}" = 'focused' ] && scrot --focused   -- "${save_path}"
+
+elif command -v xdotool gm >/dev/null; then
+    [ "${1}" = 'full'    ] && gm import -window root                           "${save_path}"
+    [ "${1}" = 'select'  ] && gm import                                        "${save_path}"
+    [ "${1}" = 'focused' ] && gm import -window "$(xdotool getwindowfocus -f)" "${save_path}"
+
+elif command -v xdotool import >/dev/null; then
+    [ "${1}" = 'full'    ] && import -window root                           -- "${save_path}"
+    [ "${1}" = 'select'  ] && import                                        -- "${save_path}"
+    [ "${1}" = 'focused' ] && import -window "$(xdotool getwindowfocus -f)" -- "${save_path}"
+
+else
+    # current xwd lacks -rect option on ubuntu: can't test
+    # escrotum not in the repos
+    echo "No graphics/image-magick's import or scrot or maim installed"
+    exit 1
+
+fi
+
+
+if command -v xclip >/dev/null; then
+    printf %s "${save_path}" | xclip -in -selection primary
+    xclip -selection clipboard -target image/png <"${save_path}"
+
+elif command -v xsel >/dev/null; then
+    printf %s "${save_path}" | xsel --input --primary
+    printf %s "${save_path}" | xsel --input --clipboard
+fi
+
+
+printf '%s\n' "${save_path}"
+
+
+(
+    # Execute under lock
+    # if flock is available
+    if command -v flock >/dev/null; then
+        flock 9
+    fi
+
+    if [ -n "${SCREENSHOT_DOCKER_HOST:-}" ] && docker info >/dev/null 2>&1; then
+        (
+            export DOCKER_HOST=${SCREENSHOT_DOCKER_HOST}
+            # Create a container that would auto-destroy in 10 minutes
+            container_id=$(
+                docker run --rm -d \
+                    skhaz/compression-tools \
+                    sleep $(( 60 * 10 ))
+            )
+            # Destroy container on exit from brackets
+            trap 'docker rm -f "${container_id}" >/dev/null; trap - EXIT; exit' EXIT INT HUP
+            # Copy file to container, process it, and copy back
+            docker cp "${save_path}" "${container_id}:/${save_name}"
+            docker exec -ti "${container_id}" ect -9 "/${save_name}"
+            docker container cp "${container_id}:/${save_name}" "${save_path}"
+
+            printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        )
+
+    elif command -v etc >/dev/null; then
+        ect -9 "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif command -v leanify >/dev/null; then
+        leanify --iteration 100 -- "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "png" ] && command -v pngout  >/dev/null; then
+        pngout "${save_path}" "/tmp/${save_name}" || [ $? = 2 ]
+        mv "/tmp/${save_name}" "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "png" ] && command -v optipng   >/dev/null; then
+        optipng -o7 -strip all -- "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "png" ] && command -v pngcrush  >/dev/null; then
+        pngcrush -brute -reduce "${save_path}" "/tmp/${save_name}"
+        if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
+            mv "/tmp/${save_name}" "${save_path}"
+        fi
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "png" ] && command -v advpng    >/dev/null; then
+        advpng --recompress --shrink-insane --iter=100 -- "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "jpg" ] && command -v jpegoptim >/dev/null; then
+        jpegoptim --strip-all -- "${save_path}"
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    elif [ "${save_ext}" = "jpg" ] && command -v jpegoptim >/dev/null; then
+        jpegtran -copy none -perfect -optimize -outfile "/tmp/${save_name}" "${save_path}"
+        if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
+            mv "/tmp/${save_name}" "${save_path}"
+        fi
+        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+
+    fi >&2
+
+    if command -v tesseract >/dev/null; then
+        tesseract -l eng+rus --psm 1 "${save_path}" "${save_dir}/${save_date}"
+    fi >&2
+
+) 9>"/var/lock/screenshot-$(id -u).lock"
+
+
+# We expect word splitting here
+# shellcheck disable=2046
+getsize() { set -- $(ls -dn "$1") && printf %s "$5"; }

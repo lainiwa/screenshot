@@ -1,0 +1,92 @@
+screenshot(7) -- portable screenshot wrapper script
+==================================================
+
+## SYNOPSIS
+  `screenshot` `full`|`selected`|`focused`
+
+## DESCRIPTION
+  Poshot is a script that suggests a certain workflow with screenshots.
+  It does the following:
+
+    1. make and save a screenshot
+    2. [optionally] copy to clipboard
+    3. [optionally] optimize it
+    4. [optionally] OCR it
+
+  The optional items are being run only if you have a software
+  that can do the job, thus providing a gradual degradation.
+
+  The tool creates a ~/screenshots directory, with the following structure:
+
+    ~/screenshots/
+    |-- .optimized
+    |-- 1455484949_2016.02.15_00:22:29.png
+    |-- 1455484949_2016.02.15_00:22:29.txt
+    ...
+    |-- 1607071986_2020.12.04_11:53:06.png
+    `-- 1607071986_2020.12.04_11:53:06.txt
+
+  The .optimized file contains names of the files
+  that have been compressed, so that you whould be able to tell
+  which files can be yet optimized, and which not.
+
+  Every file, as long as it had been recognized, is paired by .txt file
+  with it's textual content. This files enables you search your screenshots
+  by their textual content.
+
+## OPTIONS
+## ENVIRONMENT
+  SCREENSHOT_DOCKER_HOST  If defined, screenshot will try using docker for image
+                          optimization first. The variable follows
+                          the format of docker's DOCKER_HOST variable.
+## OPTIONS
+## EXIT STATUS
+## EXAMPLES
+  Shoot full screen:
+
+    $ screenshot full
+
+  Shoot window under focus:
+
+    $ screenshot focused
+
+  Let user select an area to be saved:
+
+    $ screenshot selected
+
+  Use docker on remote server for screenshot compression:
+
+    $ SCREENSHOT_DOCKER_HOST=ssh://root@your.server.com screenshot <mode>
+
+## HINTS
+  If you want to set screenshot to try use your local docker
+  for screenshot compression first, point SCREENSHOT_DOCKER_HOST
+  to local socket:
+
+    $ export SCREENSHOT_DOCKER_HOST=unix:///var/run/docker.sock
+
+  You can place this line somewhere into ~/.profile or ~/.zprofile
+  to keep this setting.
+
+  You might want to bind this to your DE/WM/hotkey daemon. For example,
+  you can configure i3wm by addind the following lines to ~/.config/i3/config:
+
+    bindsym            Print exec screenshot full
+    bindsym      Shift+Print exec screenshot select
+    bindsym $mod+Shift+Print exec screenshot focused
+
+  If can use the following snippet to open all images containing certain text
+  in sxiv. This is how you might search for all images with the word "bookmark":
+
+    $ grep -rlI bookmark ~/screenshots | sed 's/txt$/png/g' | sxiv -tio
+
+  Of course, you can adapt this snippet for the viewer of your choice.
+
+## SEE ALSO
+  maim(1)
+## BUGS
+  No known bugs.
+## REPORTING BUGS
+  Please report bugs to https://github.com/lainiwa/dotfiles/issues
+## AUTHOR
+  lainiwa <lainiwa@cock.li>
