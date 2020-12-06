@@ -29,7 +29,7 @@ set -o nounset  # exit on undeclared variable
 # set -o xtrace   # trace execution
 
 
-save_dir=${HOME}/0files/imgs/screenshots
+save_dir=${SCREENSHOT_DIR:-${HOME}/screenshots}
 save_ext=png
 save_date=$(date '+%s_%Y.%m.%d_%H:%M:%S')
 save_name=${save_date}.${save_ext}
@@ -38,22 +38,29 @@ save_path=${save_dir}/${save_name}
 mkdir -p "${save_dir}"
 
 
-if command -v maim xdotool >/dev/null; then
+# We expect word splitting here
+# shellcheck disable=2046
+getsize() { set -- $(ls -dn "$1") && printf %s "$5"; }
+has() { command -v "$@" >/dev/null; }
+was_optimized() { printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"; }
+
+
+if has maim xdotool; then
     [ "${1}" = 'full'    ] && maim                                         -- "${save_path}"
     [ "${1}" = 'select'  ] && maim --select                                -- "${save_path}"
     [ "${1}" = 'focused' ] && maim --window "$(xdotool getwindowfocus -f)" -- "${save_path}"
 
-elif command -v scrot >/dev/null; then
+elif has scrot; then
     [ "${1}" = 'full'    ] && scrot --multidisp -- "${save_path}"
     [ "${1}" = 'select'  ] && scrot --select    -- "${save_path}"
     [ "${1}" = 'focused' ] && scrot --focused   -- "${save_path}"
 
-elif command -v xdotool gm >/dev/null; then
+elif has xdotool gm; then
     [ "${1}" = 'full'    ] && gm import -window root                           "${save_path}"
     [ "${1}" = 'select'  ] && gm import                                        "${save_path}"
     [ "${1}" = 'focused' ] && gm import -window "$(xdotool getwindowfocus -f)" "${save_path}"
 
-elif command -v xdotool import >/dev/null; then
+elif has xdotool import; then
     [ "${1}" = 'full'    ] && import -window root                           -- "${save_path}"
     [ "${1}" = 'select'  ] && import                                        -- "${save_path}"
     [ "${1}" = 'focused' ] && import -window "$(xdotool getwindowfocus -f)" -- "${save_path}"
@@ -67,11 +74,11 @@ else
 fi
 
 
-if command -v xclip >/dev/null; then
+if has xclip; then
     printf %s "${save_path}" | xclip -in -selection primary
     xclip -selection clipboard -target image/png <"${save_path}"
 
-elif command -v xsel >/dev/null; then
+elif has xsel; then
     printf %s "${save_path}" | xsel --input --primary
     printf %s "${save_path}" | xsel --input --clipboard
 fi
@@ -83,7 +90,7 @@ printf '%s\n' "${save_path}"
 (
     # Execute under lock
     # if flock is available
-    if command -v flock >/dev/null; then
+    if has flock; then
         flock 9
     fi
 
@@ -103,57 +110,52 @@ printf '%s\n' "${save_path}"
             docker exec -ti "${container_id}" ect -9 "/${save_name}"
             docker container cp "${container_id}:/${save_name}" "${save_path}"
 
-            printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+            was_optimized
         )
 
-    elif command -v etc >/dev/null; then
+    elif has etc; then
         ect -9 "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif command -v leanify >/dev/null; then
+    elif has leanify; then
         leanify --iteration 100 -- "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "png" ] && command -v pngout  >/dev/null; then
+    elif [ "${save_ext}" = "png" ] && has pngout; then
         pngout "${save_path}" "/tmp/${save_name}" || [ $? = 2 ]
         mv "/tmp/${save_name}" "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "png" ] && command -v optipng   >/dev/null; then
+    elif [ "${save_ext}" = "png" ] && has optipng; then
         optipng -o7 -strip all -- "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "png" ] && command -v pngcrush  >/dev/null; then
+    elif [ "${save_ext}" = "png" ] && has pngcrush; then
         pngcrush -brute -reduce "${save_path}" "/tmp/${save_name}"
         if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
             mv "/tmp/${save_name}" "${save_path}"
         fi
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "png" ] && command -v advpng    >/dev/null; then
+    elif [ "${save_ext}" = "png" ] && has advpng; then
         advpng --recompress --shrink-insane --iter=100 -- "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "jpg" ] && command -v jpegoptim >/dev/null; then
+    elif [ "${save_ext}" = "jpg" ] && has jpegoptim; then
         jpegoptim --strip-all -- "${save_path}"
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
-    elif [ "${save_ext}" = "jpg" ] && command -v jpegoptim >/dev/null; then
+    elif [ "${save_ext}" = "jpg" ] && has jpegoptim; then
         jpegtran -copy none -perfect -optimize -outfile "/tmp/${save_name}" "${save_path}"
         if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
             mv "/tmp/${save_name}" "${save_path}"
         fi
-        printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"
+        was_optimized
 
     fi >&2
 
-    if command -v tesseract >/dev/null; then
+    if has tesseract; then
         tesseract -l eng+rus --psm 1 "${save_path}" "${save_dir}/${save_date}"
     fi >&2
 
 ) 9>"/var/lock/screenshot-$(id -u).lock"
-
-
-# We expect word splitting here
-# shellcheck disable=2046
-getsize() { set -- $(ls -dn "$1") && printf %s "$5"; }

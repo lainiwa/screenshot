@@ -1,0 +1,16 @@
+#compdef _screenshot screenshot
+
+_screenshot() {
+    local -a commands
+    commands=(
+        'full:Shoot whole screen'
+        'select:Select an area with mouse to shoot'
+        'focused:Shoot focused window'
+    )
+
+    if ((CURRENT == 2)); then
+        _describe -t commands 'commands' commands
+    fi
+
+    return 0
+}

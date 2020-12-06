@@ -34,13 +34,19 @@ screenshot(7) -- portable screenshot wrapper script
   with it's textual content. This files enables you search your screenshots
   by their textual content.
 
-## OPTIONS
 ## ENVIRONMENT
+  SCREENSHOT_DIR          Where to save screenshot images. Defaults to `~/screenshots`.
+
   SCREENSHOT_DOCKER_HOST  If defined, screenshot will try using docker for image
                           optimization first. The variable follows
                           the format of docker's DOCKER_HOST variable.
 ## OPTIONS
 ## EXIT STATUS
+The screenshot utility exits with one of the following values:
+
+      0    Success. Screenshot was created
+      1    Failure. Screenshot could not be captured
+
 ## EXAMPLES
   Shoot full screen:
 
@@ -82,8 +88,10 @@ screenshot(7) -- portable screenshot wrapper script
 
   Of course, you can adapt this snippet for the viewer of your choice.
 
+## HOMEPAGE
+  https://github.com/lainiwa/dotfiles
 ## SEE ALSO
-  maim(1)
+  maim(1), xdotool(1), scrot(1), gm(1), import(1)
 ## BUGS
   No known bugs.
 ## REPORTING BUGS
