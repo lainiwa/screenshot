@@ -4,7 +4,7 @@ set -o errexit  # exit on fail
 set -o nounset  # exit on undeclared variable
 # set -o xtrace   # trace execution
 
-# docker build -t screenshot .
+docker build -t screenshot .
 
 SCREENSHOT_DIR=${SCREENSHOT_DIR:-${PWD}/shared}
 
