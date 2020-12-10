@@ -12,6 +12,7 @@ RUN ["shellcheck", "/app/screenshot"]
 
 FROM alpine:3.12.1 as prod
 LABEL org.opencontainers.image.source https://github.com/lainiwa/screenshot
+ENV SCREENSHOT_DIR /opt/shared
 COPY --from=builder /root/ect/build/ect /usr/local/bin
 RUN apk add --no-cache --update \
     scrot=1.3-r0 \
