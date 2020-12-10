@@ -6,7 +6,6 @@ RUN git checkout 777dcb8 .
 RUN mkdir build && cd build && cmake ../src && make -j$(nproc)
 
 FROM koalaman/shellcheck:v0.7.1 AS test
-WORKDIR /app
 COPY . /app
 RUN ["shellcheck", "/app/screenshot"]
 
@@ -15,6 +14,5 @@ LABEL org.opencontainers.image.source https://github.com/lainiwa/screenshot
 COPY --from=builder /root/ect/build/ect /usr/local/bin
 RUN apk add --no-cache --update scrot tesseract-ocr tesseract-ocr-data-rus
 RUN chmod 777 /var/lock
-WORKDIR /user
 COPY . /app
 ENTRYPOINT ["/app/screenshot"]
