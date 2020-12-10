@@ -13,7 +13,10 @@ RUN ["shellcheck", "/app/screenshot"]
 FROM alpine:3.12.1 as prod
 LABEL org.opencontainers.image.source https://github.com/lainiwa/screenshot
 COPY --from=builder /root/ect/build/ect /usr/local/bin
-RUN apk add --no-cache --update scrot tesseract-ocr tesseract-ocr-data-rus
+RUN apk add --no-cache --update \
+    scrot=1.3-r0 \
+    tesseract-ocr=4.1.1-r3 \
+    tesseract-ocr-data-rus=4.1.1-r3
 RUN chmod 777 /var/lock
 WORKDIR /user
 COPY . /app
