@@ -6,7 +6,8 @@ RUN apk add --no-cache --update git=2.26.2-r0 \
 RUN git clone --recursive https://github.com/fhanau/Efficient-Compression-Tool /root/ect
 WORKDIR /root/ect
 RUN git checkout 777dcb8 .
-RUN mkdir build && cd build && cmake ../src && make -j$(nproc)
+WORKDIR /root/ect/build
+RUN cmake ../src && make -j"$(nproc)"
 
 FROM koalaman/shellcheck:v0.7.1 AS test
 COPY . /app
