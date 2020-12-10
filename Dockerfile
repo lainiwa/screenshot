@@ -6,7 +6,6 @@ RUN git checkout 777dcb8 .
 RUN mkdir build && cd build && cmake ../src && make -j$(nproc)
 
 FROM koalaman/shellcheck:v0.7.1 AS test
-WORKDIR /app
 COPY . /app
 RUN ["shellcheck", "/app/screenshot"]
 
@@ -19,6 +18,5 @@ RUN apk add --no-cache --update \
     tesseract-ocr=4.1.1-r3 \
     tesseract-ocr-data-rus=4.1.1-r3
 RUN chmod 777 /var/lock
-WORKDIR /user
 COPY . /app
 ENTRYPOINT ["/app/screenshot"]
