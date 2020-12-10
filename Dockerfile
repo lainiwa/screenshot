@@ -1,6 +1,6 @@
 FROM alpine:3.12.1 AS builder
 RUN apk add --no-cache --update git=2.26.2-r0 \
-                                alpine=sdk-1.0-r0 \
+                                alpine-sdk=1.0-r0 \
                                 cmake=3.17.2-r0 \
                                 nasm=2.14.02-r0
 RUN git clone --recursive https://github.com/fhanau/Efficient-Compression-Tool /root/ect
