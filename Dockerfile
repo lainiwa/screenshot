@@ -1,8 +1,8 @@
 FROM alpine:3.13.2 AS builder
-RUN apk add --no-cache --update git=2.26.2-r0 \
-                                alpine-sdk=1.0-r0 \
-                                cmake=3.17.2-r0 \
-                                nasm=2.14.02-r0
+RUN apk add --no-cache --update git \
+                                alpine-sdk \
+                                cmake \
+                                nasm
 RUN git clone --recursive https://github.com/fhanau/Efficient-Compression-Tool /root/ect
 WORKDIR /root/ect
 RUN git checkout 777dcb8 .
@@ -17,9 +17,9 @@ FROM alpine:3.13.2 as prod
 LABEL org.opencontainers.image.source=https://github.com/lainiwa/screenshot
 ENV SCREENSHOT_DIR /opt/shared
 COPY --from=builder /root/ect/build/ect /usr/local/bin
-RUN apk add --no-cache --update scrot=1.3-r0 \
-                                tesseract-ocr=4.1.1-r3 \
-                                tesseract-ocr-data-rus=4.1.1-r3
+RUN apk add --no-cache --update scrot \
+                                tesseract-ocr \
+                                tesseract-ocr-data-rus
 RUN chmod 777 /var/lock
 COPY . /app
 ENTRYPOINT ["/app/screenshot"]
