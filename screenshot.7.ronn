@@ -89,12 +89,12 @@ The screenshot utility exits with one of the following values:
   Of course, you can adapt this snippet for the viewer of your choice.
 
 ## HOMEPAGE
-  https://github.com/lainiwa/dotfiles
+  https://github.com/lainiwa/screenshot
 ## SEE ALSO
   maim(1), xdotool(1), scrot(1), gm(1), import(1)
 ## BUGS
   No known bugs.
 ## REPORTING BUGS
-  Please report bugs to https://github.com/lainiwa/dotfiles/issues
+  Please report bugs to https://github.com/lainiwa/screenshot/issues
 ## AUTHOR
   lainiwa <lainiwa@cock.li>
