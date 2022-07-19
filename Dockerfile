@@ -1,4 +1,4 @@
-FROM alpine:3.14.2 AS builder
+FROM alpine:3.16.1 AS builder
 RUN apk add --no-cache --update git \
                                 alpine-sdk \
                                 cmake \
@@ -13,7 +13,7 @@ FROM koalaman/shellcheck:v0.7.1 AS test
 COPY . /app
 RUN ["shellcheck", "/app/screenshot"]
 
-FROM alpine:3.14.2 as prod
+FROM alpine:3.16.1 as prod
 LABEL org.opencontainers.image.source=https://github.com/lainiwa/screenshot
 ENV SCREENSHOT_DIR /opt/shared
 COPY --from=builder /root/ect/build/ect /usr/local/bin
