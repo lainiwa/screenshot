@@ -44,6 +44,10 @@ getsize() { set -- $(ls -dn "$1") && printf %s "$5"; }
 has() { command -v "$@" >/dev/null; }
 was_optimized() { printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"; }
 
+if [ "$#" -ne 1 ] || [ "${1}" = "help" ]; then
+    printf '%s' 'Usage:'
+    exit
+fi
 
 if has maim xdotool; then
     [ "${1}" = 'full'    ] && maim                                         -- "${save_path}"
