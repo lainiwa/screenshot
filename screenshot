@@ -19,7 +19,7 @@
 # * Screenshot tool: maim + xdotool | scrot | graphicsmagick + xdotool | imagemagick + xdotool
 # * Clipboard tool [opt]: xclip | xsel
 # * Image lossless optimizer [opt]: optipng | pngcrush | jpegoptim
-# * OCR tool [opt]: tesseract + tesseract-ocr-rus
+# * OCR tool [opt]: tesseract + tesseract-ocr-rus | easyocr
 # * Locks manager [opt]: flock
 #
 
@@ -156,6 +156,8 @@ printf '%s\n' "${save_path}"
 
     if has tesseract; then
         tesseract -l eng+rus --psm 1 "${save_path}" "${save_dir}/${save_date}"
+    elif has easyocr; then
+        easyocr --lang en ru --detail 0 --file "${save_path}" > "${save_dir}/${save_date}.txt"
     fi >&2
 
 ) 9>"/var/lock/screenshot-$(id -u).lock"
