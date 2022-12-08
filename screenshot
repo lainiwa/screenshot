@@ -16,7 +16,14 @@
 #
 # DEPENDENCIES:
 # * Interpreter: POSIX shell + coreutils
-# * Screenshot tool: maim + xdotool | scrot | graphicsmagick + xdotool | imagemagick + xdotool
+# * Screenshot tool:
+#   * menyoki  + xdotool + (hacksaw | slop)
+#   * shotgun  + xdotool + (hacksaw | slop)
+#   * maim     + xdotool
+#   * escrotum + xdotool
+#   * mss      + xdotool + (hacksaw | slop)
+#   * scrot
+#   * (graphicsmagick | imagemagick) + xdotool
 # * Clipboard tool [opt]: xclip | xsel
 # * Image lossless optimizer [opt]: optipng | pngcrush | jpegoptim
 # * OCR tool [opt]: tesseract + tesseract-ocr-rus | easyocr
@@ -40,60 +47,147 @@ mkdir -p "${save_dir}"
 
 # We expect word splitting here
 # shellcheck disable=2046
-getsize() { set -- $(ls -dn "$1") && printf %s "$5"; }
+get_size() { set -- $(ls -dn "$1") && printf %s "$5"; }
 has() { command -v "$@" >/dev/null; }
+has_focus_window_getter() { has xdotool || has xprop sed; }
+has_selection_getter() { has hacksaw || has slop; }
 was_optimized() { printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"; }
 
-
-if has maim xdotool; then
-    [ "${1}" = 'full'    ] && maim                                         -- "${save_path}"
-    [ "${1}" = 'select'  ] && maim --select                                -- "${save_path}"
-    [ "${1}" = 'focused' ] && maim --window "$(xdotool getwindowfocus -f)" -- "${save_path}"
-
-elif has scrot; then
-    [ "${1}" = 'full'    ] && scrot --multidisp -- "${save_path}"
-    [ "${1}" = 'select'  ] && scrot --select    -- "${save_path}"
-    [ "${1}" = 'focused' ] && scrot --focused   -- "${save_path}"
-
-elif has xdotool gm; then
-    [ "${1}" = 'full'    ] && gm import -window root                           "${save_path}"
-    [ "${1}" = 'select'  ] && gm import                                        "${save_path}"
-    [ "${1}" = 'focused' ] && gm import -window "$(xdotool getwindowfocus -f)" "${save_path}"
-
-elif has xdotool import; then
-    [ "${1}" = 'full'    ] && import -window root                           -- "${save_path}"
-    [ "${1}" = 'select'  ] && import                                        -- "${save_path}"
-    [ "${1}" = 'focused' ] && import -window "$(xdotool getwindowfocus -f)" -- "${save_path}"
-
-else
-    # current xwd lacks -rect option on ubuntu: can't test
-    # escrotum not in the repos
-    echo "No graphics/image-magick's import or scrot or maim installed"
-    exit 1
-
-fi
-
-
-if has xclip; then
-    printf %s "${save_path}" | xclip -in -selection primary
-    xclip -selection clipboard -target image/png <"${save_path}"
-
-elif has xsel; then
-    printf %s "${save_path}" | xsel --input --primary
-    printf %s "${save_path}" | xsel --input --clipboard
-fi
-
-
-printf '%s\n' "${save_path}"
-
-
-(
-    # Execute under lock
-    # if flock is available
-    if has flock; then
-        flock 9
+get_focused_window() {
+    if has xdotool; then
+        xdotool getwindowfocus -f
+    elif has xprop sed; then
+        printf '%d\n' "$(xprop -root |sed 's/.*# \([0-9a-fx]*\).*/\1/')"
+    else
+        printf "Internal error!\n" >&2
+        exit 1
     fi
+}
 
+usage() {
+    printf "\
+Usage: screenshot COMMAND
+DESCRIPTION
+    Make a screenshot.
+COMMANDS:
+full
+        Make a full screen screenshot.
+select
+        Select a screenshot area with a mouse.
+focused
+        Make a screenshot of the currently focused window.
+" >&2
+}
+
+check_user_input() {
+    if [ $# -ne 1 ] || ! {
+        [ "$1" = "full" ] ||
+        [ "$1" = "select" ] ||
+        [ "$1" = "focused" ];
+    }
+    then
+        usage
+        exit 1
+    fi
+}
+
+
+make_screenshot() {
+    if has_selection_getter && has menyoki; then
+        if has hacksaw; then
+            selection=$(hacksaw)
+        else
+            selection=$(slop)
+        fi
+        case $1 in
+        'full'   ) menyoki -q capture --root                       png save -- "${save_path}" ;;
+        'select' ) menyoki -q capture --root --size "${selection}" png save -- "${save_path}" ;;
+        'focused') menyoki -q capture --focus                      png save -- "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has_selection_getter && has shotgun; then
+        if has hacksaw; then
+            selection=$(hacksaw -f "--id %i --geometry %g")
+        else
+            selection=$(slop    -f "--id %i --geometry %g")
+        fi
+        # shellcheck disable=SC2086
+        case $1 in
+        'full'   ) shotgun                              -- "${save_path}" ;;
+        'select' ) shotgun ${selection}                 -- "${save_path}" ;;
+        'focused') shotgun --id "$(get_focused_window)" -- "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has maim; then
+        case $1 in
+        'full'   ) maim                                  -- "${save_path}" ;;
+        'select' ) maim --select                         -- "${save_path}" ;;
+        'focused') maim --window "$(get_focused_window)" -- "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has escrotum; then
+        case $1 in
+        'full'   ) escrotum                               -- "${save_path}" ;;
+        'select' ) escrotum --select                      -- "${save_path}" ;;
+        'focused') escrotum --xid "$(get_focused_window)" -- "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has_selection_getter && has mss; then
+        if has hacksaw; then
+            selection=$(hacksaw -f "%x,%y,%w,%h")
+        else
+            selection=$(slop    -f "%x,%y,%w,%h")
+        fi
+        case $1 in
+        'full'   ) mss                                       --output "${save_path}" ;;
+        'select' ) mss --coordinates "${selection}"          --output "${save_path}" ;;
+        'focused') mss --coordinates "$(get_focused_window)" --output "${save_path}" ;;
+        esac
+
+    elif has scrot; then
+        case $1 in
+        'full'   ) scrot --multidisp -- "${save_path}" ;;
+        'select' ) scrot --select    -- "${save_path}" ;;
+        'focused') scrot --focused   -- "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has gm; then
+        case $1 in
+        'full'   ) gm import -window root                    "${save_path}" ;;
+        'select' ) gm import                                 "${save_path}" ;;
+        'focused') gm import -window "$(get_focused_window)" "${save_path}" ;;
+        esac
+
+    elif has_focus_window_getter && has import; then
+        case $1 in
+        'full'   ) import -window root                    -- "${save_path}" ;;
+        'select' ) import                                 -- "${save_path}" ;;
+        'focused') import -window "$(get_focused_window)" -- "${save_path}" ;;
+        esac
+
+    else
+        # current xwd lacks -rect option on ubuntu: can't test
+        # imlib2_grab can only make a fullscreen shot
+        printf "No graphics/image-magick's import or scrot or escrotum or maim or shotgun or menyoki installed\n" >&2
+        exit 1
+
+    fi
+}
+
+
+copy_to_clipboard() {
+    if has xclip; then
+        printf %s "${save_path}" | xclip -in -selection primary
+        xclip -selection clipboard -target image/png <"${save_path}"
+
+    elif has xsel; then
+        printf %s "${save_path}" | xsel --input --primary
+        printf %s "${save_path}" | xsel --input --clipboard
+    fi
+}
+
+
+optimize_image() {
     if [ -n "${SCREENSHOT_DOCKER_HOST:-}" ] && docker info >/dev/null 2>&1; then
         (
             export DOCKER_HOST=${SCREENSHOT_DOCKER_HOST}
@@ -132,7 +226,7 @@ printf '%s\n' "${save_path}"
 
     elif [ "${save_ext}" = "png" ] && has pngcrush; then
         pngcrush -brute -reduce "${save_path}" "/tmp/${save_name}"
-        if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
+        if [ "$(get_size "/tmp/${save_name}")" -lt "$(get_size "${save_path}")" ]; then
             mv "/tmp/${save_name}" "${save_path}"
         fi
         was_optimized
@@ -147,17 +241,41 @@ printf '%s\n' "${save_path}"
 
     elif [ "${save_ext}" = "jpg" ] && has jpegoptim; then
         jpegtran -copy none -perfect -optimize -outfile "/tmp/${save_name}" "${save_path}"
-        if [ "$(getsize "/tmp/${save_name}")" -lt "$(getsize "${save_path}")" ]; then
+        if [ "$(get_size "/tmp/${save_name}")" -lt "$(get_size "${save_path}")" ]; then
             mv "/tmp/${save_name}" "${save_path}"
         fi
         was_optimized
 
-    fi >&2
+    fi
+}
 
+
+ocr_image() {
     if has tesseract; then
         tesseract -l eng+rus --psm 1 "${save_path}" "${save_dir}/${save_date}"
     elif has easyocr; then
         easyocr --lang en ru --detail 0 --file "${save_path}" > "${save_dir}/${save_date}.txt"
-    fi >&2
+    fi
+}
+
+
+check_user_input "$@"
+
+make_screenshot "$@"
+
+printf '%s\n' "${save_path}"
+
+copy_to_clipboard
+
+(
+    # Execute under lock
+    # if flock is available
+    if has flock; then
+        flock 9
+    fi
+
+    optimize_image >&2
+
+    ocr_image >&2
 
 ) 9>"/var/lock/screenshot-$(id -u).lock"
