@@ -42,8 +42,6 @@ save_date=$(date '+%s_%Y.%m.%d_%H:%M:%S')
 save_name=${save_date}.${save_ext}
 save_path=${save_dir}/${save_name}
 
-mkdir -p "${save_dir}"
-
 
 # We expect word splitting here
 # shellcheck disable=2046
@@ -272,6 +270,8 @@ ocr_image() {
 
 
 check_user_input "$@"
+
+mkdir -p "${save_dir}"
 
 make_screenshot "$@"
 
