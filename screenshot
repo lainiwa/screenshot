@@ -17,11 +17,11 @@
 # DEPENDENCIES:
 # * Interpreter: POSIX shell + coreutils
 # * Screenshot tool:
-#   * menyoki  + xdotool + (hacksaw | slop)
-#   * shotgun  + xdotool + (hacksaw | slop)
+#   * menyoki  + xdotool + (hacksaw | xrectsel | slop)
+#   * shotgun  + xdotool + (hacksaw | xrectsel | slop)
 #   * maim     + xdotool
 #   * escrotum + xdotool
-#   * mss      + xdotool + (hacksaw | slop)
+#   * mss      + xdotool + (hacksaw | xrectsel | slop)
 #   * scrot
 #   * (graphicsmagick | imagemagick) + xdotool
 # * Clipboard tool [opt]: xclip | xsel
@@ -50,7 +50,7 @@ mkdir -p "${save_dir}"
 get_size() { set -- $(ls -dn "$1") && printf %s "$5"; }
 has() { command -v "$@" >/dev/null; }
 has_focus_window_getter() { has xdotool || has xprop sed; }
-has_selection_getter() { has hacksaw || has slop; }
+has_selection_getter() { has hacksaw || has xrectsel || has slop; }
 was_optimized() { printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"; }
 
 get_focused_window() {
@@ -94,11 +94,15 @@ check_user_input() {
 
 make_screenshot() {
     if has_selection_getter && has menyoki; then
-        if has hacksaw; then
-            selection=$(hacksaw)
-        else
-            selection=$(slop)
-        fi
+        selection=$(
+            if has hacksaw; then
+                hacksaw
+            elif has xrectsel; then
+                xrectsel
+            else
+                slop
+            fi
+        )
         case $1 in
         'full'   ) menyoki -q capture --root                       png save -- "${save_path}" ;;
         'select' ) menyoki -q capture --root --size "${selection}" png save -- "${save_path}" ;;
@@ -106,11 +110,15 @@ make_screenshot() {
         esac
 
     elif has_focus_window_getter && has_selection_getter && has shotgun; then
-        if has hacksaw; then
-            selection=$(hacksaw -f "--id %i --geometry %g")
-        else
-            selection=$(slop    -f "--id %i --geometry %g")
-        fi
+        selection=$(
+            if has hacksaw; then
+                hacksaw  -f "--id %i --geometry %g"
+            elif has xrectsel; then
+                xrectsel -f "        --geometry %wx%h+%x+%y"
+            else
+                slop     -f "--id %i --geometry %g"
+            fi
+        )
         # shellcheck disable=SC2086
         case $1 in
         'full'   ) shotgun                              -- "${save_path}" ;;
@@ -133,11 +141,15 @@ make_screenshot() {
         esac
 
     elif has_focus_window_getter && has_selection_getter && has mss; then
-        if has hacksaw; then
-            selection=$(hacksaw -f "%x,%y,%w,%h")
-        else
-            selection=$(slop    -f "%x,%y,%w,%h")
-        fi
+        selection=$(
+            if has hacksaw; then
+                hacksaw  -f "%x,%y,%w,%h"
+            elif has xrectsel; then
+                xrectsel -f "%x,%y,%w,%h"
+            else
+                slop     -f "%x,%y,%w,%h"
+            fi
+        )
         case $1 in
         'full'   ) mss                                       --output "${save_path}" ;;
         'select' ) mss --coordinates "${selection}"          --output "${save_path}" ;;
