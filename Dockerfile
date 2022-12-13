@@ -9,7 +9,7 @@ RUN git checkout 777dcb8 .
 WORKDIR /root/ect/build
 RUN cmake ../src && make -j"$(nproc)"
 
-FROM koalaman/shellcheck:v0.7.1 AS test
+FROM koalaman/shellcheck:v0.9.0 AS test
 COPY . /app
 RUN ["shellcheck", "/app/screenshot"]
 
