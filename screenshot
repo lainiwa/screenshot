@@ -217,6 +217,10 @@ optimize_image() {
             was_optimized
         )
 
+    elif [ "${save_ext}" = "png" ] && has oxipng; then
+        oxipng --quiet --opt max --threads 1 -- "${save_path}"
+        was_optimized
+
     elif has etc; then
         ect -9 "${save_path}"
         was_optimized
