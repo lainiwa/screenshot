@@ -249,7 +249,7 @@ optimize_image() {
         jpegoptim --strip-all -- "${save_path}"
         was_optimized
 
-    elif [ "${save_ext}" = "jpg" ] && has jpegoptim; then
+    elif [ "${save_ext}" = "jpg" ] && has jpegtran; then
         jpegtran -copy none -perfect -optimize -outfile "/tmp/${save_name}" "${save_path}"
         if [ "$(get_size "/tmp/${save_name}")" -lt "$(get_size "${save_path}")" ]; then
             mv "/tmp/${save_name}" "${save_path}"
