@@ -25,7 +25,7 @@
 #   * scrot
 #   * (graphicsmagick | imagemagick) + xdotool
 # * Clipboard tool [opt]: xclip | xsel
-# * Image lossless optimizer [opt]: optipng | pngcrush | jpegoptim
+# * Image lossless optimizer [opt]: oxipng | ect | leanify | pngout | optipng | pngcrush | advpng | jpegoptim | jpegtran
 # * OCR tool [opt]: tesseract + tesseract-ocr-rus | easyocr
 # * Locks manager [opt]: flock
 #
@@ -90,6 +90,7 @@ check_user_input() {
 }
 
 
+# https://wiki.archlinux.org/title/Screen_capture#Dedicated_software
 make_screenshot() {
     if has_selection_getter && has menyoki; then
         selection=$(
@@ -197,6 +198,7 @@ copy_to_clipboard() {
 }
 
 
+# https://wiki.archlinux.org/title/List_of_applications/Multimedia#Console
 optimize_image() {
     if [ -n "${SCREENSHOT_DOCKER_HOST:-}" ] && docker info >/dev/null 2>&1; then
         (
