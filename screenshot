@@ -55,7 +55,7 @@ get_focused_window() {
     if has xdotool; then
         xdotool getwindowfocus -f
     elif has xprop sed; then
-        printf '%d\n' "$(xprop -root |sed 's/.*# \([0-9a-fx]*\).*/\1/')"
+        printf '%d\n' "$(xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2)"
     else
         printf "Internal error!\n" >&2
         exit 1
