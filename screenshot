@@ -36,12 +36,11 @@ set -o nounset  # exit on undeclared variable
 # set -o xtrace   # trace execution
 
 
-save_dir=${SCREENSHOT_DIR:-${HOME}/screenshots}
-save_ext=png
+SCREENSHOT_DIR=${SCREENSHOT_DIR:-${HOME}/screenshots}
 save_date=$(date '+%s_%Y.%m.%d_%H:%M:%S')
-save_name=${save_date}.${save_ext}
-save_path=${save_dir}/${save_name}
-
+SCREENSHOT_NAME=${SCREENSHOT_NAME:-${save_date}.png}
+SCREENSHOT_PATH=${SCREENSHOT_PATH:-${SCREENSHOT_DIR}/${SCREENSHOT_NAME}}
+SCREENSHOT_OCR_LANGS=${SCREENSHOT_OCR_LANGS:-eng+rus}
 
 # We expect word splitting here
 # shellcheck disable=2046
@@ -49,7 +48,7 @@ get_size() { set -- $(ls -dn "$1") && printf %s "$5"; }
 has() { command -v "$@" >/dev/null; }
 has_focus_window_getter() { has xdotool || has xprop sed; }
 has_selection_getter() { has hacksaw || has xrectsel || has slop; }
-was_optimized() { printf "%s\n" "${save_name}" >> "${save_dir}/.optimized"; }
+was_optimized() { printf "%s\n" "${SCREENSHOT_NAME}" >> "${SCREENSHOT_DIR}/.optimized"; }
 
 get_focused_window() {
     if has xdotool; then
@@ -103,9 +102,9 @@ make_screenshot() {
             fi
         )
         case $1 in
-        'full'   ) menyoki -q capture --root                       png save -- "${save_path}" ;;
-        'select' ) menyoki -q capture --root --size "${selection}" png save -- "${save_path}" ;;
-        'focused') menyoki -q capture --focus                      png save -- "${save_path}" ;;
+        'full'   ) menyoki -q capture --root                       png save -- "${SCREENSHOT_PATH}" ;;
+        'select' ) menyoki -q capture --root --size "${selection}" png save -- "${SCREENSHOT_PATH}" ;;
+        'focused') menyoki -q capture --focus                      png save -- "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has_selection_getter && has shotgun; then
@@ -120,23 +119,23 @@ make_screenshot() {
         )
         # shellcheck disable=SC2086
         case $1 in
-        'full'   ) shotgun                              -- "${save_path}" ;;
-        'select' ) shotgun ${selection}                 -- "${save_path}" ;;
-        'focused') shotgun --id "$(get_focused_window)" -- "${save_path}" ;;
+        'full'   ) shotgun                              -- "${SCREENSHOT_PATH}" ;;
+        'select' ) shotgun ${selection}                 -- "${SCREENSHOT_PATH}" ;;
+        'focused') shotgun --id "$(get_focused_window)" -- "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has maim; then
         case $1 in
-        'full'   ) maim                                  -- "${save_path}" ;;
-        'select' ) maim --select                         -- "${save_path}" ;;
-        'focused') maim --window "$(get_focused_window)" -- "${save_path}" ;;
+        'full'   ) maim                                  -- "${SCREENSHOT_PATH}" ;;
+        'select' ) maim --select                         -- "${SCREENSHOT_PATH}" ;;
+        'focused') maim --window "$(get_focused_window)" -- "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has escrotum; then
         case $1 in
-        'full'   ) escrotum                               -- "${save_path}" ;;
-        'select' ) escrotum --select                      -- "${save_path}" ;;
-        'focused') escrotum --xid "$(get_focused_window)" -- "${save_path}" ;;
+        'full'   ) escrotum                               -- "${SCREENSHOT_PATH}" ;;
+        'select' ) escrotum --select                      -- "${SCREENSHOT_PATH}" ;;
+        'focused') escrotum --xid "$(get_focused_window)" -- "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has_selection_getter && has mss; then
@@ -150,30 +149,30 @@ make_screenshot() {
             fi
         )
         case $1 in
-        'full'   ) mss                                       --output "${save_path}" ;;
-        'select' ) mss --coordinates "${selection}"          --output "${save_path}" ;;
-        'focused') mss --coordinates "$(get_focused_window)" --output "${save_path}" ;;
+        'full'   ) mss                                       --output "${SCREENSHOT_PATH}" ;;
+        'select' ) mss --coordinates "${selection}"          --output "${SCREENSHOT_PATH}" ;;
+        'focused') mss --coordinates "$(get_focused_window)" --output "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has scrot; then
         case $1 in
-        'full'   ) scrot --multidisp -- "${save_path}" ;;
-        'select' ) scrot --select    -- "${save_path}" ;;
-        'focused') scrot --focused   -- "${save_path}" ;;
+        'full'   ) scrot --multidisp -- "${SCREENSHOT_PATH}" ;;
+        'select' ) scrot --select    -- "${SCREENSHOT_PATH}" ;;
+        'focused') scrot --focused   -- "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has gm; then
         case $1 in
-        'full'   ) gm import -window root                    "${save_path}" ;;
-        'select' ) gm import                                 "${save_path}" ;;
-        'focused') gm import -window "$(get_focused_window)" "${save_path}" ;;
+        'full'   ) gm import -window root                    "${SCREENSHOT_PATH}" ;;
+        'select' ) gm import                                 "${SCREENSHOT_PATH}" ;;
+        'focused') gm import -window "$(get_focused_window)" "${SCREENSHOT_PATH}" ;;
         esac
 
     elif has_focus_window_getter && has import; then
         case $1 in
-        'full'   ) import -window root                    -- "${save_path}" ;;
-        'select' ) import                                 -- "${save_path}" ;;
-        'focused') import -window "$(get_focused_window)" -- "${save_path}" ;;
+        'full'   ) import -window root                    -- "${SCREENSHOT_PATH}" ;;
+        'select' ) import                                 -- "${SCREENSHOT_PATH}" ;;
+        'focused') import -window "$(get_focused_window)" -- "${SCREENSHOT_PATH}" ;;
         esac
 
     else
@@ -188,12 +187,12 @@ make_screenshot() {
 
 copy_to_clipboard() {
     if has xclip; then
-        printf %s "${save_path}" | xclip -in -selection primary
-        xclip -selection clipboard -target image/png <"${save_path}"
+        printf %s "${SCREENSHOT_PATH}" | xclip -in -selection primary
+        xclip -selection clipboard -target image/png <"${SCREENSHOT_PATH}"
 
     elif has xsel; then
-        printf %s "${save_path}" | xsel --input --primary
-        printf %s "${save_path}" | xsel --input --clipboard
+        printf %s "${SCREENSHOT_PATH}" | xsel --input --primary
+        printf %s "${SCREENSHOT_PATH}" | xsel --input --clipboard
     fi
 }
 
@@ -212,54 +211,43 @@ optimize_image() {
             # Destroy container on exit from brackets
             trap 'docker rm -f "${container_id}" >/dev/null; trap - EXIT; exit' EXIT INT HUP
             # Copy file to container, process it, and copy back
-            docker cp "${save_path}" "${container_id}:/${save_name}"
-            docker exec -ti "${container_id}" ect -9 "/${save_name}"
-            docker container cp "${container_id}:/${save_name}" "${save_path}"
+            docker cp "${SCREENSHOT_PATH}" "${container_id}:/${SCREENSHOT_NAME}"
+            docker exec -ti "${container_id}" ect -9 "/${SCREENSHOT_NAME}"
+            docker container cp "${container_id}:/${SCREENSHOT_NAME}" "${SCREENSHOT_PATH}"
 
             was_optimized
         )
 
-    elif [ "${save_ext}" = "png" ] && has oxipng; then
-        oxipng --quiet --opt max --threads 1 -- "${save_path}"
+    elif has oxipng; then
+        oxipng --quiet --opt max --threads 1 -- "${SCREENSHOT_PATH}"
         was_optimized
 
     elif has etc; then
-        ect -9 "${save_path}"
+        ect -9 "${SCREENSHOT_PATH}"
         was_optimized
 
     elif has leanify; then
-        leanify --iteration 100 -- "${save_path}"
+        leanify --iteration 100 -- "${SCREENSHOT_PATH}"
         was_optimized
 
-    elif [ "${save_ext}" = "png" ] && has pngout; then
-        pngout "${save_path}" "/tmp/${save_name}" || [ $? = 2 ]
-        mv "/tmp/${save_name}" "${save_path}"
+    elif has pngout; then
+        pngout "${SCREENSHOT_PATH}" "/tmp/${SCREENSHOT_NAME}" || [ $? = 2 ]
+        mv "/tmp/${SCREENSHOT_NAME}" "${SCREENSHOT_PATH}"
         was_optimized
 
-    elif [ "${save_ext}" = "png" ] && has optipng; then
-        optipng -o7 -strip all -- "${save_path}"
+    elif has optipng; then
+        optipng -o7 -strip all -- "${SCREENSHOT_PATH}"
         was_optimized
 
-    elif [ "${save_ext}" = "png" ] && has pngcrush; then
-        pngcrush -brute -reduce "${save_path}" "/tmp/${save_name}"
-        if [ "$(get_size "/tmp/${save_name}")" -lt "$(get_size "${save_path}")" ]; then
-            mv "/tmp/${save_name}" "${save_path}"
+    elif has pngcrush; then
+        pngcrush -brute -reduce "${SCREENSHOT_PATH}" "/tmp/${SCREENSHOT_NAME}"
+        if [ "$(get_size "/tmp/${SCREENSHOT_NAME}")" -lt "$(get_size "${SCREENSHOT_PATH}")" ]; then
+            mv "/tmp/${SCREENSHOT_NAME}" "${SCREENSHOT_PATH}"
         fi
         was_optimized
 
-    elif [ "${save_ext}" = "png" ] && has advpng; then
-        advpng --recompress --shrink-insane --iter=100 -- "${save_path}"
-        was_optimized
-
-    elif [ "${save_ext}" = "jpg" ] && has jpegoptim; then
-        jpegoptim --strip-all -- "${save_path}"
-        was_optimized
-
-    elif [ "${save_ext}" = "jpg" ] && has jpegtran; then
-        jpegtran -copy none -perfect -optimize -outfile "/tmp/${save_name}" "${save_path}"
-        if [ "$(get_size "/tmp/${save_name}")" -lt "$(get_size "${save_path}")" ]; then
-            mv "/tmp/${save_name}" "${save_path}"
-        fi
+    elif has advpng; then
+        advpng --recompress --shrink-insane --iter=100 -- "${SCREENSHOT_PATH}"
         was_optimized
 
     fi
@@ -268,32 +256,34 @@ optimize_image() {
 
 ocr_image() {
     if has tesseract; then
-        tesseract -l eng+rus --psm 1 "${save_path}" "${save_dir}/${save_date}"
+        tesseract \
+            -l "${SCREENSHOT_OCR_LANGS}" \
+            --psm 1 \
+            "${SCREENSHOT_PATH}" \
+            "${SCREENSHOT_DIR}/${save_date}"
     elif has easyocr; then
-        easyocr --lang en ru --detail 0 --file "${save_path}" > "${save_dir}/${save_date}.txt"
+        easyocr \
+            --lang $(printf %s "${SCREENSHOT_OCR_LANGS}" |sed -e 's/[a-z]+/ /g' -e 's/[a-z]$//g') \
+            --detail 0 --file "${SCREENSHOT_PATH}" > "${SCREENSHOT_DIR}/${save_date}.txt"
     fi
 }
 
 
-check_user_input "$@"
+main() {
+    check_user_input "$@"
+    mkdir -p "${SCREENSHOT_DIR}"
+    make_screenshot "$@"
+    printf '%s\n' "${SCREENSHOT_PATH}"
+    copy_to_clipboard
+    (
+        # Execute under lock
+        # if flock is available
+        if has flock; then
+            flock 9
+        fi
+        optimize_image >&2
+        ocr_image >&2
+    ) 9>"/var/lock/screenshot-$(id -u).lock"
+}
 
-mkdir -p "${save_dir}"
-
-make_screenshot "$@"
-
-printf '%s\n' "${save_path}"
-
-copy_to_clipboard
-
-(
-    # Execute under lock
-    # if flock is available
-    if has flock; then
-        flock 9
-    fi
-
-    optimize_image >&2
-
-    ocr_image >&2
-
-) 9>"/var/lock/screenshot-$(id -u).lock"
+main "$@"
